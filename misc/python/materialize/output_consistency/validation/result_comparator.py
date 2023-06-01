@@ -7,7 +7,6 @@
 # the Business Source License, use of this software will be governed
 # by the Apache License, Version 2.0.
 import math
-import re
 from decimal import Decimal
 from typing import Any, cast
 
@@ -16,6 +15,9 @@ from materialize.output_consistency.query.query_result import (
     QueryFailure,
     QueryOutcome,
     QueryResult,
+)
+from materialize.output_consistency.validation.error_message_normalizer import (
+    ErrorMessageNormalizer,
 )
 from materialize.output_consistency.validation.validation_message import (
     ValidationError,
@@ -30,6 +32,9 @@ from materialize.output_consistency.validation.validation_outcome import (
 
 class ResultComparator:
     """Compares the outcome (result or failure) of multiple query executions"""
+
+    def __init__(self) -> None:
+        self.error_message_normalizer = ErrorMessageNormalizer()
 
     def compare_results(self, query_execution: QueryExecution) -> ValidationOutcome:
         validation_outcome = ValidationOutcome()
@@ -165,8 +170,12 @@ class ResultComparator:
         failure2: QueryFailure,
         validation_outcome: ValidationOutcome,
     ) -> None:
-        norm_error_message_1 = self.normalize_error_message(failure1.error_message)
-        norm_error_message_2 = self.normalize_error_message(failure2.error_message)
+        norm_error_message_1 = self.error_message_normalizer.normalize(
+            failure1.error_message
+        )
+        norm_error_message_2 = self.error_message_normalizer.normalize(
+            failure2.error_message
+        )
 
         if norm_error_message_1 != norm_error_message_2:
             validation_outcome.add_error(
@@ -182,14 +191,6 @@ class ResultComparator:
                     sql2=failure2.sql,
                 )
             )
-
-    def normalize_error_message(self, error_message: str) -> str:
-        # replace source prefix in column
-        normalized_message = re.sub(
-            'column "[^.]*\\.', 'column "<source>.', error_message
-        )
-        normalized_message = normalized_message.replace("Evaluation error: ", "")
-        return normalized_message
 
     def warn_on_failure_with_multiple_columns(
         self,
