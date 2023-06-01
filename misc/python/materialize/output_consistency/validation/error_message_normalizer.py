@@ -18,4 +18,7 @@ class ErrorMessageNormalizer:
         )
         normalized_message = normalized_message.replace("Evaluation error: ", "")
 
+        if normalized_message.startswith("mz_timestamp out of range ("):
+            normalized_message = normalized_message[0 : normalized_message.index(" (")]
+
         return normalized_message
