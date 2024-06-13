@@ -51,6 +51,7 @@ CREATE OR REPLACE VIEW v_data_integrity (table_name, own_item_key, referenced_it
     GROUP BY build_step_id
     HAVING count(*) > 1
     -- other
+    UNION
     SELECT 'build_step', build_step_id, NULL, 'build step id is not unique'
     FROM build_step
     GROUP BY build_step_id
