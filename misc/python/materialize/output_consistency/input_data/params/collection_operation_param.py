@@ -72,7 +72,9 @@ class CollectionLikeOtherCollectionOperationParam(AnyLikeOtherOperationParam):
             assert isinstance(previous_arg_ret_type_spec, CollectionReturnTypeSpec)
             return (
                 data_type.value_type_category
-                == previous_arg_ret_type_spec.get_entry_value_type()
+                == previous_arg_ret_type_spec.get_entry_value_type(
+                    previous_arg.compute_input_type_hints()
+                )
             )
 
         return False
@@ -111,4 +113,6 @@ class ElementOfOtherCollectionOperationParam(AnyLikeOtherOperationParam):
         previous_arg = self._get_previous_arg(previous_args)
         previous_arg_ret_type_spec = previous_arg.resolve_return_type_spec()
         assert isinstance(previous_arg_ret_type_spec, CollectionReturnTypeSpec)
-        return data_type.category == previous_arg_ret_type_spec.get_entry_value_type()
+        return data_type.category == previous_arg_ret_type_spec.get_entry_value_type(
+            previous_arg.compute_input_type_hints()
+        )

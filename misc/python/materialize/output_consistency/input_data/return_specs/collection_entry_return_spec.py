@@ -38,4 +38,4 @@ class CollectionEntryReturnTypeSpec(DynamicReturnTypeSpec):
         )
 
         assert isinstance(input_arg_return_type_spec, CollectionReturnTypeSpec)
-        return input_arg_return_type_spec.get_entry_value_type()
+        return input_arg_return_type_spec.get_entry_value_type(input_arg_type_hints)
