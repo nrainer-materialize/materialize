@@ -18,10 +18,10 @@ class CollectionReturnTypeSpec(ReturnTypeSpec):
     def __init__(
         self,
         data_type_category: DataTypeCategory,
-        param_index_of_map_value_type: int = 0,
+        param_index_of_collection_value_type: int = 0,
         entry_value_type_category: DataTypeCategory = DataTypeCategory.DYNAMIC,
     ):
-        super().__init__(data_type_category, [param_index_of_map_value_type])
+        super().__init__(data_type_category, [param_index_of_collection_value_type])
         self._entry_value_type_category = entry_value_type_category
 
     def resolve_type_category(
