@@ -195,6 +195,16 @@ class LeafExpression(Expression):
     def try_resolve_exact_data_type(self) -> DataType | None:
         return self.data_type
 
+    def compute_input_type_hints(self) -> InputArgTypeHints:
+        input_arg_type_hints = super().compute_input_type_hints()
+
+        collection_type = self.data_type.get_collection_type_category()
+        if collection_type is not None:
+            # put the element type of collections for arg index 0
+            input_arg_type_hints.type_category_of_requested_args[0] = collection_type
+
+        return input_arg_type_hints
+
     def to_sql(
         self, sql_adjuster: SqlDialectAdjuster, include_alias: bool, is_root_level: bool
     ) -> str:
