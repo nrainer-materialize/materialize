@@ -98,7 +98,12 @@ class ExpressionWithArgs(Expression):
         return self.return_type_spec
 
     def resolve_return_type_category(self) -> DataTypeCategory:
-        input_type_hints = InputArgTypeHints()
+        return self.return_type_spec.resolve_type_category(
+            self.compute_input_type_hints()
+        )
+
+    def compute_input_type_hints(self) -> InputArgTypeHints:
+        input_type_hints = super().compute_input_type_hints()
 
         if self.return_type_spec.indices_of_required_input_type_hints is not None:
             # provide input types that are required as hints to determine the output type
@@ -115,7 +120,7 @@ class ExpressionWithArgs(Expression):
                         self.args[arg_index].resolve_return_type_spec()
                     )
 
-        return self.return_type_spec.resolve_type_category(input_type_hints)
+        return input_type_hints
 
     def try_resolve_exact_data_type(self) -> DataType | None:
         return self.operation.try_resolve_exact_data_type(self.args)

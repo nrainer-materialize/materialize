@@ -24,7 +24,10 @@ from materialize.output_consistency.execution.value_storage_layout import (
 from materialize.output_consistency.expression.expression_characteristics import (
     ExpressionCharacteristics,
 )
-from materialize.output_consistency.operation.return_type_spec import ReturnTypeSpec
+from materialize.output_consistency.operation.return_type_spec import (
+    InputArgTypeHints,
+    ReturnTypeSpec,
+)
 from materialize.output_consistency.query.data_source import DataSource
 from materialize.output_consistency.selection.row_selection import (
     ALL_ROWS_SELECTION,
@@ -80,6 +83,9 @@ class Expression:
         :return: the data type category that the use of this value will lead to
         """
         return self.resolve_return_type_category()
+
+    def compute_input_type_hints(self) -> InputArgTypeHints:
+        return InputArgTypeHints()
 
     def try_resolve_exact_data_type(self) -> DataType | None:
         raise NotImplementedError
