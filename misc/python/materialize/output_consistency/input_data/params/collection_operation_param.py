@@ -107,6 +107,10 @@ class CollectionOfOtherElementOperationParam(AnyLikeOtherOperationParam):
 
 
 class ElementOfOtherCollectionOperationParam(AnyLikeOtherOperationParam):
+
+    def operates_on_collection_element(self) -> bool:
+        return True
+
     def supports_type(
         self, data_type: DataType, previous_args: list[Expression]
     ) -> bool:

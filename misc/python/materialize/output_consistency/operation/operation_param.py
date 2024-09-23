@@ -72,5 +72,8 @@ class OperationParam:
     ) -> DataTypeCategory:
         return self._type_category
 
+    def operates_on_collection_element(self) -> bool:
+        return False
+
     def __str__(self) -> str:
         return f"{type(self).__name__} (optional={self.optional})"

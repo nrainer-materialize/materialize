@@ -13,7 +13,10 @@ from materialize.output_consistency.common import probability
 from materialize.output_consistency.common.configuration import (
     ConsistencyTestConfiguration,
 )
-from materialize.output_consistency.data_type.data_type_category import DataTypeCategory
+from materialize.output_consistency.data_type.data_type_category import (
+    DataTypeCategory,
+    is_collection_data_type_category,
+)
 from materialize.output_consistency.data_type.data_type_with_values import (
     DataTypeWithValues,
 )
@@ -468,9 +471,19 @@ class ExpressionGenerator:
 
         self._assert_valid_type_category_for_param(param, category)
 
-        preselected_types_with_values = self.types_with_values_by_category.get(
-            category, []
-        )
+        if (
+            is_collection_data_type_category(category)
+            and param.operates_on_collection_element()
+        ):
+            # consider all types
+            preselected_types_with_values = (
+                self.input_data.types_input.all_data_types_with_values
+            )
+        else:
+            preselected_types_with_values = self.types_with_values_by_category.get(
+                category, []
+            )
+
         suitable_types_with_values = []
 
         for type_with_values in preselected_types_with_values:

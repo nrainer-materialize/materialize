@@ -36,3 +36,12 @@ class DataTypeCategory(Enum):
     RECORD = 400
 
     UNDETERMINED = 500
+
+
+def is_collection_data_type_category(category: DataTypeCategory) -> bool:
+    return category in {
+        DataTypeCategory.ARRAY,
+        DataTypeCategory.LIST,
+        DataTypeCategory.MAP,
+        DataTypeCategory.RANGE,
+    }
