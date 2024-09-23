@@ -198,6 +198,9 @@ class LeafExpression(Expression):
     def compute_input_type_hints(self) -> InputArgTypeHints:
         input_arg_type_hints = super().compute_input_type_hints()
 
+        # TODO: consider doing this without inputargtypes because it does not really fit
+        # TODO: not working with index: [] || [] => index 0 might get overwritten
+
         collection_type = self.data_type.get_collection_type_category()
         if collection_type is not None:
             # put the element type of collections for arg index 0
