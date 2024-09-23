@@ -43,5 +43,8 @@ class CollectionDataType(DataType):
     ) -> CollectionReturnTypeSpec:
         return self._create_collection_return_type_spec()
 
+    def get_collection_type_category(self) -> DataTypeCategory | None:
+        return self.value_type_category
+
     def _create_collection_return_type_spec(self) -> CollectionReturnTypeSpec:
         raise NotImplementedError

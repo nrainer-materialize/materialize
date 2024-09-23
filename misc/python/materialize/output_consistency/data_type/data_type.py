@@ -40,6 +40,9 @@ class DataType:
     def get_type_name(self, sql_adjuster: SqlDialectAdjuster) -> str:
         return sql_adjuster.adjust_type(self.type_name)
 
+    def get_collection_type_category(self) -> DataTypeCategory | None:
+        return None
+
     def value_to_sql(self, string_value: str, sql_adjuster: SqlDialectAdjuster) -> str:
         adjusted_string_value = sql_adjuster.adjust_value(
             string_value, self.internal_identifier, self.type_name
