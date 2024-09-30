@@ -9,113 +9,133 @@
 # the Business Source License, use of this software will be governed
 # by the Apache License, Version 2.0.
 
-import argparse
+import re
+import time
+from pathlib import Path
 
-from materialize.buildkite_insights.annotation_search import annotation_search_logic
-from materialize.buildkite_insights.annotation_search.buildkite_search_source import (
-    ANY_PIPELINE_VALUE,
-    BuildkiteDataSource,
-)
-from materialize.buildkite_insights.buildkite_api.buildkite_config import (
-    MZ_PIPELINES_WITH_WILDCARD,
-)
-from materialize.buildkite_insights.cache.cache_constants import (
-    FETCH_MODE_CHOICES,
-    FetchMode,
-)
+verbose = False
+include_csv = False
+
+misses = []
+
+def modify_content(path_in_str: str, content: str, offset: int = 0) -> str:
+    if "CREATE SOURCE" not in content:
+        return content
+
+    if offset > 0:
+        print("Offset: ", offset)
+
+    reg = re.compile(
+        r"\n([#>!? ]*)CREATE SOURCE (.*?)(\s|#|IN CLUSTER [A-Za-z0-9-_.{}$]+)+FROM KAFKA CONNECTION (.*?)(\s|#)+\([^)]*TOPIC\s+'(.*?)'[^)]*\)((\s|#)+[^>]([^>]|\s)+?)(\n\n|;|\n(>|!|contains:[^\n]+))"
+    )
+
+    match = reg.search(content, pos=offset)
+
+    reg2 = re.compile("FROM KAFKA CONNECTION")
+    match2 = reg2.search(content, pos=offset)
+
+    if match is None:
+        if match2 is not None:
+            miss = f"MISSED in {path_in_str} at {match2.start()}!"
+            print(miss)
+            misses.append(miss)
+
+        return content
+
+    if verbose:
+        print("Match at ", match.start())
+
+    statement = match.group(0)
+    lead_in = match.group(1).lstrip()
+    source_name = match.group(2)
+    topic = match.group(6)
+    options_with_space_prefix = match.group(7)
+
+    if "FORMAT CSV" in statement and not include_csv:
+        # skip it for now
+        return modify_content(path_in_str, content, offset + len(statement))
+
+    modified_statement = statement.replace(options_with_space_prefix, "")
+
+    table_suffix = "tbl"
+    table_name = f"{source_name}_{table_suffix}"
+
+    added_statement = f"{lead_in}CREATE TABLE {table_name} FROM SOURCE {source_name} (REFERENCE \"{topic}\"){options_with_space_prefix}"
+
+    if statement.endswith(";"):
+        added_statement = f"\n{added_statement};"
+    else:
+        added_statement = f"{added_statement}\n\n"
+
+    if not modified_statement.endswith("\n"):
+        modified_statement = f"{modified_statement}\n"
+
+    replacement = f"{modified_statement}{added_statement}"
+    content = content.replace(statement, replacement)
+    content = content.replace("DELETE FROM", "DELETEFROMX")
+    content = content.replace("delete from", "DELETEFROMX")
+
+    for ending in [" ", "\n", ";"]:
+        content = content.replace(f"FROM {source_name}{ending}", f"FROM {table_name}{ending}")
+        content = content.replace(f"JOIN {source_name}{ending}", f"JOIN {table_name}{ending}")
+        content = content.replace(f"SUBSCRIBE {source_name}{ending}", f"SUBSCRIBE {table_name}{ending}")
+
+        content = content.replace(f"from {source_name}{ending}", f"from {table_name}{ending}")
+        content = content.replace(f"join {source_name}{ending}", f"join {table_name}{ending}")
+        content = content.replace(f"subscribe {source_name}{ending}", f"subscribe {table_name}{ending}")
+
+    content = content.replace("DELETEFROMX", "DELETE FROM")
+
+    if verbose:
+        print("Replacing: \n", statement)
+        print("with \n", replacement)
+
+    return modify_content(path_in_str, content, match.start() + len(replacement) - 5)
+
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        prog="buildkite-annotation-search",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
+    file_ending = "*"
+    pathlist = Path("/Users/nrainer/Workspaces/mz-repo").glob(f"**/*.{file_ending}")
 
-    parser.add_argument(
-        "pipeline",
-        choices=MZ_PIPELINES_WITH_WILDCARD,
-        type=str,
-        help=f"Use {ANY_PIPELINE_VALUE} for all pipelines",
-    )
+    textchars = bytearray({7, 8, 9, 10, 12, 13, 27} | set(range(0x20, 0x100)) - {0x7F})
+    is_binary_string = lambda bytes: bool(bytes.translate(None, textchars))
 
-    parser.add_argument("pattern", type=str)
+    time.sleep(10)
 
-    parser.add_argument(
-        "--branch",
-        type=str,
-        default=None,
-    )
-    parser.add_argument(
-        "--fetch-builds",
-        type=lambda mode: FetchMode[mode.upper()],
-        choices=FETCH_MODE_CHOICES,
-        default=FetchMode.AUTO,
-        help="Whether to fetch fresh builds from Buildkite.",
-    )
-    parser.add_argument(
-        "--fetch-annotations",
-        type=lambda mode: FetchMode[mode.upper()],
-        choices=FETCH_MODE_CHOICES,
-        default=FetchMode.AUTO,
-        help="Whether to fetch fresh annotations from Buildkite.",
-    )
-    parser.add_argument("--max-build-fetches", default=2, type=int)
-    parser.add_argument("--first-build-page-to-fetch", default=1, type=int)
-    parser.add_argument("--max-results", default=50, type=int)
-    parser.add_argument(
-        "--only-one-result-per-build",
-        default=False,
-        action="store_true",
-    )
-    parser.add_argument(
-        "--only-failed-builds",
-        default=False,
-        action="store_true",
-    )
-    parser.add_argument(
-        "--short",
-        default=False,
-        action="store_true",
-    )
-    parser.add_argument(
-        "--oneline",
-        default=False,
-        action="store_true",
-    )
-    parser.add_argument(
-        "--only-failed-build-step-key", action="append", default=[], type=str
-    )
-    parser.add_argument(
-        "--verbose",
-        default=False,
-        action="store_true",
-    )
-    parser.add_argument(
-        "--use-regex",
-        action="store_true",
-    )
-    args = parser.parse_args()
+    for path in pathlist:
+        if path.is_dir():
+            continue
 
-    if args.short and args.oneline:
-        print("Note: --oneline will be ignored if --short is set")
+        path_in_str = str(path)
 
-    source = BuildkiteDataSource(
-        fetch_builds_mode=args.fetch_builds,
-        fetch_annotations_mode=args.fetch_annotations,
-        max_build_fetches=args.max_build_fetches,
-        first_build_page_to_fetch=args.first_build_page_to_fetch,
-        only_failed_builds=args.only_failed_builds,
-        only_failed_build_step_keys=args.only_failed_build_step_key,
-    )
+        print(f"{path_in_str} ...")
 
-    annotation_search_logic.start_search(
-        args.pipeline,
-        args.branch,
-        source,
-        args.max_results,
-        args.only_one_result_per_build,
-        args.pattern,
-        args.use_regex,
-        args.short,
-        args.oneline,
-        args.verbose,
-    )
+        if "python/venv" in path_in_str or "venv/lib" in path_in_str or "/target-xcompile/" in path_in_str or "/target/debug" in path_in_str or "doc/user" in path_in_str:
+            continue
+
+        if path_in_str.endswith(".log"):
+            continue
+
+        if path_in_str.endswith(".md"):
+            # not interested
+            continue
+
+        if is_binary_string(open(path_in_str, "rb").read(1024)):
+            continue
+
+        file = open(path_in_str)
+        original_content = file.read()
+
+        altered_content = modify_content(path_in_str, original_content)
+
+        if altered_content == original_content:
+            print(f"NOP")
+            continue
+        else:
+            print("Touched: ", path_in_str)
+
+        file = open(path_in_str, "w")
+        file.write(altered_content)
+
+    info_file = open(f"/Users/nrainer/Downloads/log_{time.time()}.txt", "w")
+    info_file.write("\n".join(misses))
