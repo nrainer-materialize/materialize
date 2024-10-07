@@ -10,7 +10,6 @@
 -- TPC-H Query #Q18, chosen for the workload for its GROUP BY clause
 
 -- depends_on: {{ ref('tpch') }}
--- depends_on: {{ ref('tpch_lineitem') }}
 {{ config(materialized='materialized_view', cluster='qa_canary_environment_compute', indexes=[{'default': True}]) }}
 
 SELECT
@@ -25,7 +24,7 @@ SELECT
     avg(l_discount) AS avg_disc,
     count(*) AS count_order
 FROM
-    {{ source('tpch', 'tpch_lineitem') }}
+    {{ source('tpch','lineitem') }}
 WHERE
     l_shipdate <= DATE '1998-12-01' - INTERVAL '60' day
 GROUP BY

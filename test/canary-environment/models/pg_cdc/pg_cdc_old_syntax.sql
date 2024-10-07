@@ -7,9 +7,7 @@
 -- the Business Source License, use of this software will be governed
 -- by the Apache License, Version 2.0.
 
--- depends_on: {{ ref('tpch') }}
-{{ config(
-    materialized='source_table'
-) }}
-FROM SOURCE {{ ref('tpch') }}
-(REFERENCE "lineitem")
+{{ config(materialized='source', cluster='qa_canary_environment_storage') }}
+FROM POSTGRES
+CONNECTION pg (PUBLICATION 'mz_source')
+FOR TABLES (people, relationships)

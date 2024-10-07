@@ -12,9 +12,6 @@
 -- to ensure the result updates frequently
 
 -- depends_on: {{ ref('tpch') }}
--- depends_on: {{ ref('tpch_customer') }}
--- depends_on: {{ ref('tpch_orders') }}
--- depends_on: {{ ref('tpch_lineitem') }}
 {{ config(materialized='materialized_view', cluster='qa_canary_environment_compute', indexes=[{'default': True}]) }}
 
 SELECT
@@ -25,15 +22,15 @@ SELECT
     o_totalprice,
     sum(l_quantity)
 FROM
-    {{ source('tpch','tpch_customer') }} ,
-    {{ source('tpch','tpch_orders') }} ,
-    {{ source('tpch','tpch_lineitem') }}
+    {{ source('tpch','customer') }} ,
+    {{ source('tpch','orders') }} ,
+    {{ source('tpch','lineitem') }}
 WHERE
     o_orderkey IN (
         SELECT
             l_orderkey
         FROM
-            {{ source('tpch','tpch_lineitem') }}
+            {{ source('tpch','lineitem') }}
         GROUP BY
             l_orderkey having
                 sum(l_quantity) > 250

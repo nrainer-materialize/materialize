@@ -9,3 +9,4 @@
 
 {{ config(materialized='source', cluster='qa_canary_environment_storage') }}
 FROM MYSQL CONNECTION mysql
+FOR TABLES (public.people, public.relationships)
