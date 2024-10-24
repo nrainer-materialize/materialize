@@ -1405,7 +1405,7 @@ def _reduce_memory(
     if new_gb < lower_bound_in_gb:
         new_gb = lower_bound_in_gb
 
-    return f"{new_gb}Gb"
+    return f"{round(new_gb, 2)}Gb"
 
 
 def _get_memory_in_gb(memory_spec: str) -> float:
